@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
+import Privacy from './Privacy';
 import axios from 'axios';
 import AdSlot from './AdSlot';
 import { hasAdSenseConfig } from './adsense';
@@ -150,6 +151,10 @@ rzp.open();
     document.body.appendChild(a); a.click(); a.remove();
   }
 
+  if (window.location.pathname === '/privacy') {
+    return <Privacy />;
+  }
+
   return <div className="page">
     <header className="header">
       <div className="brand"><div className="logo">SMR</div><div><strong>Form Tools</strong><span>Simple tools for online forms</span></div></div>
@@ -161,7 +166,7 @@ rzp.open();
         <div>
           <p className="eyebrow">INDIA FORM TOOLKIT</p>
           <h1>Photo ko required KB mein ready karo.</h1>
-          <p className="lead">Upload → automatic resize/compress → download. Payment ke bina bhi option rahega: supported rewarded ad complete karke unlock.</p>
+          <p className="lead">Upload â†’ automatic resize/compress â†’ download. Payment ke bina bhi option rahega: supported rewarded ad complete karke unlock.</p>
         </div>
         <div className="card tool-card">
           <form onSubmit={handleProcess}>
@@ -173,17 +178,17 @@ rzp.open();
             <label className="dropzone">
               <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} />
               <div className="drop-title">{file ? file.name : 'Photo select karo'}</div>
-              <div className="drop-sub">JPG / PNG • browser mein process hoga</div>
+              <div className="drop-sub">JPG / PNG â€¢ browser mein process hoga</div>
             </label>
-            <button className="primary" disabled={busy}>{busy ? 'Processing…' : `Make ${targetLabel}`}</button>
+            <button className="primary" disabled={busy}>{busy ? 'Processingâ€¦' : `Make ${targetLabel}`}</button>
           </form>
 
           {result && <div className="unlock-box">
-            <div className="ready"><span>✓</span> {message}</div>
+            <div className="ready"><span>âœ“</span> {message}</div>
             <p>Download ke liye ek option choose karo:</p>
             <div className="unlock-actions">
-              <button className="secondary" onClick={watchAdToUnlock}>🎁 Watch Ad & Get Free Download</button>
-              <button className="secondary" onClick={payToUnlock}>₹2 Pay & Download</button>
+              <button className="secondary" onClick={watchAdToUnlock}>ðŸŽ Watch Ad & Get Free Download</button>
+              <button className="secondary" onClick={payToUnlock}>â‚¹2 Pay & Download</button>
             </div>
             <button className="download" disabled={!unlocked} onClick={download}>{unlocked ? 'Download JPG' : 'Download locked'}</button>
           </div>}
@@ -200,16 +205,17 @@ rzp.open();
       <section id="pricing" className="pricing">
         <h2>Simple monetization</h2>
         <div className="plans">
-          <div className="plan"><h3>Free Route</h3><p>Supported rewarded ad complete karo → one download unlock.</p><span>₹0</span></div>
-          <div className="plan featured"><h3>Quick Unlock</h3><p>One-time download unlock for a tiny fee.</p><span>₹2</span></div>
-          <div className="plan"><h3>Later</h3><p>30-day / 90-day packs aur subscriptions tab add karo jab usage validate ho jaye.</p><span>₹49+</span></div>
+          <div className="plan"><h3>Free Route</h3><p>Supported rewarded ad complete karo â†’ one download unlock.</p><span>â‚¹0</span></div>
+          <div className="plan featured"><h3>Quick Unlock</h3><p>One-time download unlock for a tiny fee.</p><span>â‚¹2</span></div>
+          <div className="plan"><h3>Later</h3><p>30-day / 90-day packs aur subscriptions tab add karo jab usage validate ho jaye.</p><span>â‚¹49+</span></div>
         </div>
       </section>
     </main>
 
-    <footer>© 2026 SMR Form Tools • Privacy • Terms • Contact</footer>
+    <footer>Â© 2026 SMR Form Tools â€¢ Privacy â€¢ Terms â€¢ Contact</footer>
   </div>;
 }
 
 export default App;
+
 
