@@ -1,6 +1,7 @@
 ﻿import React, { useMemo, useState } from 'react';
 import Privacy from './Privacy';
 import Terms from './Terms';
+import Contact from './Contact';
 import axios from 'axios';
 import AdSlot from './AdSlot';
 import { hasAdSenseConfig } from './adsense';
@@ -160,6 +161,10 @@ rzp.open();
     return <Terms />;
   }
 
+  if (window.location.pathname === '/contact') {
+    return <Contact />;
+  }
+
   return <div className="page">
     <header className="header">
       <div className="brand"><div className="logo">SMR</div><div><strong>Form Tools</strong><span>Simple tools for online forms</span></div></div>
@@ -222,6 +227,8 @@ rzp.open();
 }
 
 export default App;
+
+
 
 
 
