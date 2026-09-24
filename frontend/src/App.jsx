@@ -5,7 +5,7 @@ import { hasAdSenseConfig } from './adsense';
 import { hasRewardedAdConfig, showRewardedAd } from './rewardedAds';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
-const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || '';
+const RAZORPAY_KEY_ID = 'rzp_test_TfYdiodAw1z6IV';
 
 function clamp(n, min, max) { return Math.min(Math.max(n, min), max); }
 
@@ -212,3 +212,4 @@ rzp.open();
 }
 
 export default App;
+
