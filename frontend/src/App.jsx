@@ -108,7 +108,23 @@ function App() {
         },
         theme: { color: '#111827' }
       };
-      new window.Razorpay(options).open();
+      const rzp = new window.Razorpay(options);
+
+rzp.on('payment.failed', function (response) {
+  console.error('RAZORPAY PAYMENT FAILED:', response.error);
+
+  setMessage(
+    `Payment failed: ${response.error?.code || 'unknown'} - ${
+      response.error?.description || 'Unknown Razorpay error'
+    }`
+  );
+});
+
+rzp.on('modal.closed', function () {
+  console.log('Razorpay modal closed');
+});
+
+rzp.open();
     } catch (err) { setMessage(err.response?.data?.error || err.message || 'Payment error.'); }
   }
 
