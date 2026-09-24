@@ -3,8 +3,12 @@ import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
 import Razorpay from 'razorpay';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT || 8000);
 const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || 'http://localhost:5173';
 
@@ -72,6 +76,22 @@ app.post('/api/verify-payment', (req, res) => {
     console.error(error);
     res.status(400).json({ error: 'Payment verification failed.' });
   }
+});
+
+const frontendDist = path.join(__dirname, '../frontend/dist');
+
+app.use(express.static(frontendDist));
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    return next();
+  }
+
+  res.sendFile(path.join(frontendDist, 'index.html'), (error) => {
+    if (error) {
+      next(error);
+    }
+  });
 });
 
 app.use((err, _req, res, _next) => {
