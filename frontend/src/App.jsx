@@ -176,7 +176,7 @@ rzp.open();
         <div>
           <p className="eyebrow">INDIA FORM TOOLKIT</p>
           <h1>Photo ko required KB mein ready karo.</h1>
-          <p className="lead">Upload â†’ automatic resize/compress â†’ download. Payment ke bina bhi option rahega: supported rewarded ad complete karke unlock.</p>
+          <p className="lead">Upload &rarr; automatic resize/compress &rarr; download. Payment ke bina bhi option rahega: supported rewarded ad complete karke unlock.</p>
         </div>
         <div className="card tool-card">
           <form onSubmit={handleProcess}>
@@ -188,17 +188,17 @@ rzp.open();
             <label className="dropzone">
               <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} />
               <div className="drop-title">{file ? file.name : 'Photo select karo'}</div>
-              <div className="drop-sub">JPG / PNG â€¢ browser mein process hoga</div>
+              <div className="drop-sub">JPG / PNG &bull; browser mein process hoga</div>
             </label>
-            <button className="primary" disabled={busy}>{busy ? 'Processingâ€¦' : `Make ${targetLabel}`}</button>
+            <button className="primary" disabled={busy}>{busy ? 'Processing&hellip;' : `Make ${targetLabel}`}</button>
           </form>
 
           {result && <div className="unlock-box">
-            <div className="ready"><span>âœ“</span> {message}</div>
+            <div className="ready"><span>&#10003;</span> {message}</div>
             <p>Download ke liye ek option choose karo:</p>
             <div className="unlock-actions">
               <button className="secondary" onClick={watchAdToUnlock}>ðŸŽ Watch Ad & Get Free Download</button>
-              <button className="secondary" onClick={payToUnlock}>â‚¹2 Pay & Download</button>
+              <button className="secondary" onClick={payToUnlock}>&#8377;2 Pay & Download</button>
             </div>
             <button className="download" disabled={!unlocked} onClick={download}>{unlocked ? 'Download JPG' : 'Download locked'}</button>
           </div>}
@@ -215,9 +215,9 @@ rzp.open();
       <section id="pricing" className="pricing">
         <h2>Simple monetization</h2>
         <div className="plans">
-          <div className="plan"><h3>Free Route</h3><p>Supported rewarded ad complete karo â†’ one download unlock.</p><span>â‚¹0</span></div>
-          <div className="plan featured"><h3>Quick Unlock</h3><p>One-time download unlock for a tiny fee.</p><span>â‚¹2</span></div>
-          <div className="plan"><h3>Later</h3><p>30-day / 90-day packs aur subscriptions tab add karo jab usage validate ho jaye.</p><span>â‚¹49+</span></div>
+          <div className="plan"><h3>Free Route</h3><p>Supported rewarded ad complete karo &rarr; one download unlock.</p><span>&#8377;0</span></div>
+          <div className="plan featured"><h3>Quick Unlock</h3><p>One-time download unlock for a tiny fee.</p><span>&#8377;2</span></div>
+          <div className="plan"><h3>Later</h3><p>30-day / 90-day packs aur subscriptions tab add karo jab usage validate ho jaye.</p><span>&#8377;49+</span></div>
         </div>
       </section>
     </main>
