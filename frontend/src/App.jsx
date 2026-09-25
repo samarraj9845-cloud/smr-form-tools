@@ -173,6 +173,7 @@ rzp.open();
     <header className="header">
       <div className="brand"><div className="logo">SMR</div><div><strong>Form Tools</strong><span>Simple tools for online forms</span></div></div>
       <a className="navlink" href="#pricing">Pricing</a>
+      <a className="navlink" href="/resize">Image Resize</a>
     </header>
 
     <main>
