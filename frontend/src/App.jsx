@@ -2,6 +2,7 @@
 import Privacy from './Privacy';
 import Terms from './Terms';
 import Contact from './Contact';
+import ImageResize from './ImageResize';
 import axios from 'axios';
 import AdSlot from './AdSlot';
 import { hasAdSenseConfig } from './adsense';
@@ -164,6 +165,9 @@ rzp.open();
   if (window.location.pathname === '/contact') {
     return <Contact />;
   }
+  if (window.location.pathname === '/resize') {
+  return <ImageResize />;
+}
 
   return <div className="page">
     <header className="header">
