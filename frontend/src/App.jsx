@@ -177,6 +177,7 @@ rzp.open();
     </header>
 
     <main>
+      <AdSlot slot="7218418497" format="auto" responsive={true} />
       <section className="hero">
         <div>
           <p className="eyebrow">INDIA FORM TOOLKIT</p>
