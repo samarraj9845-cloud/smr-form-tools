@@ -222,11 +222,13 @@ rzp.open();
       </section>
     </main>
 
-    <footer>Â© 2026 SMR Form Tools â€¢ Privacy â€¢ Terms â€¢ Contact</footer>
+    <footer>© 2026 SMR Form Tools • <a href="/privacy">Privacy</a> • <a href="/terms">Terms</a> • <a href="/contact">Contact</a></footer>
   </div>;
 }
 
 export default App;
+
+
 
 
 
