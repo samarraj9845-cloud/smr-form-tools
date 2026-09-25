@@ -13,6 +13,44 @@ const RAZORPAY_KEY_ID = 'rzp_test_TfYdiodAw1z6IV';
 
 function clamp(n, min, max) { return Math.min(Math.max(n, min), max); }
 
+const tools = [
+  {
+    name: 'Photo KB Compressor',
+    description: 'Photo ko required KB size mein compress karo.',
+    href: '/',
+    available: true,
+  },
+  {
+    name: 'Image Resize',
+    description: 'Image ka exact width aur height set karke resize karo.',
+    href: '/resize',
+    available: true,
+  },
+  {
+    name: 'Signature Resize',
+    description: 'Signature ko required size mein resize karo.',
+    href: '/signature-resize',
+    available: false,
+  },
+  {
+    name: 'JPG to PDF',
+    description: 'JPG images ko PDF mein convert karo.',
+    href: '/jpg-to-pdf',
+    available: false,
+  },
+  {
+    name: 'PDF Compress',
+    description: 'PDF file ka size reduce karo.',
+    href: '/pdf-compress',
+    available: false,
+  },
+  {
+    name: 'Passport Photo',
+    description: 'Passport/form ke liye photo ready karo.',
+    href: '/passport-photo',
+    available: false,
+  },
+];
 async function loadRazorpay() {
   if (window.Razorpay) return true;
   await new Promise((resolve, reject) => {
@@ -73,8 +111,17 @@ function App() {
   const [message, setMessage] = useState('');
   const [unlocked, setUnlocked] = useState(false);
   const [adAvailable, setAdAvailable] = useState(hasRewardedAdConfig());
-
+  const [searchTerm, setSearchTerm] = useState('');
   const targetLabel = useMemo(() => `${targetKb} KB`, [targetKb]);
+  const filteredTools = useMemo(() => {
+  const query = searchTerm.trim().toLowerCase();
+
+  if (!query) return tools;
+
+  return tools.filter((tool) =>
+    `${tool.name} ${tool.description}`.toLowerCase().includes(query)
+  );
+}, [searchTerm]);
 
   async function handleProcess(e) {
     e.preventDefault();
@@ -173,8 +220,7 @@ rzp.open();
     <header className="header">
       <div className="brand"><div className="logo">SMR</div><div><strong>Form Tools</strong><span>Simple tools for online forms</span></div></div>
       <a className="navlink" href="#pricing">Pricing</a>
-      <a className="navlink" href="/resize">Image Resize</a>
-    </header>
+         </header>
 
     <main>
       <AdSlot slot="7218418497" format="auto" responsive={true} />
@@ -211,6 +257,50 @@ rzp.open();
           {message && !result && <p className="message">{message}</p>}
         </div>
       </section>
+
+<section className="tools-search">
+  <input
+    type="search"
+    value={searchTerm}
+    onChange={(e) => setSearchTerm(e.target.value)}
+    placeholder="Search tools..."
+    aria-label="Search tools"
+  />
+</section>
+
+<section className="tools-section">
+  <div className="tools-heading">
+    <p className="eyebrow">ALL TOOLS</p>
+    <h2>Online Form Tools</h2>
+    <p>Photo, image aur document ke useful tools ek hi jagah.</p>
+  </div>
+
+  <div className="tools-grid">
+    {filteredTools.length > 0 ? (
+      filteredTools.map((tool) => (
+        <div className="tool-item" key={tool.name}>
+          <h3>{tool.name}</h3>
+          <p>{tool.description}</p>
+
+          {tool.available ? (
+            <a className="tool-link" href={tool.href}>
+              Open Tool &rarr;
+            </a>
+          ) : (
+            <span className="tool-coming-soon">
+              Coming Soon
+            </span>
+          )}
+        </div>
+      ))
+    ) : (
+      <div className="no-tools">
+        <h3>No tool found</h3>
+        <p>Dusra keyword search karke dekho.</p>
+      </div>
+    )}
+  </div>
+</section>
 
       <section className="features">
         <div><b>Client-side first</b><span>Image processing browser mein, V1 mein AI API ki zarurat nahi.</span></div>
