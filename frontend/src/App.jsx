@@ -877,7 +877,7 @@ function App() {
                           payToUnlock
                         }
                       >
-                        ?2 Pay & Download
+                        Pay & Download
                       </button>
                     </div>
                   </>
@@ -1230,6 +1230,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
