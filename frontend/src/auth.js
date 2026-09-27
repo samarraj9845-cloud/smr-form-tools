@@ -66,6 +66,25 @@ export async function register(
   return data;
 }
 
+export async function loginWithGoogle(credential) {
+  const { data } = await axios.post(
+    `${API_BASE}/auth/google`,
+    {
+      credential
+    }
+  );
+
+  if (!data?.ok || !data?.token) {
+    throw new Error(
+      data?.error || 'Google login failed.'
+    );
+  }
+
+  setAuthToken(data.token);
+
+  return data;
+}
+
 export async function getCurrentUser() {
   const token = getAuthToken();
 

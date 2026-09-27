@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Razorpay from 'razorpay';
+import { OAuth2Client } from 'google-auth-library';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './database/database.js';
@@ -54,6 +55,13 @@ const razorpay =
     : null;
 
     const JWT_SECRET = String(process.env.JWT_SECRET || '').trim();
+
+    const GOOGLE_CLIENT_ID =
+  String(process.env.GOOGLE_CLIENT_ID || '').trim();
+
+const googleClient = GOOGLE_CLIENT_ID
+  ? new OAuth2Client(GOOGLE_CLIENT_ID)
+  : null;
 
 if (!JWT_SECRET) {
   console.warn('WARNING: JWT_SECRET is not configured.');
@@ -424,6 +432,156 @@ app.post('/api/auth/login', async (req, res) => {
 
     return res.status(500).json({
       error: 'Login failed.'
+    });
+  }
+});
+
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    if (!GOOGLE_CLIENT_ID || !googleClient) {
+      return res.status(503).json({
+        error: 'Google login backend configured nahi hai.'
+      });
+    }
+
+    const credential =
+      String(req.body?.credential || '').trim();
+
+    if (!credential) {
+      return res.status(400).json({
+        error: 'Google credential required hai.'
+      });
+    }
+
+    const ticket =
+      await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: GOOGLE_CLIENT_ID
+      });
+
+    const payload =
+      ticket.getPayload();
+
+    if (
+      !payload?.sub ||
+      !payload?.email
+    ) {
+      return res.status(401).json({
+        error: 'Google account information incomplete hai.'
+      });
+    }
+
+    if (payload.email_verified !== true) {
+      return res.status(401).json({
+        error: 'Google email verified nahi hai.'
+      });
+    }
+
+    const email =
+      String(payload.email)
+        .trim()
+        .toLowerCase();
+
+    const name =
+      String(
+        payload.name ||
+        email.split('@')[0]
+      ).trim();
+
+    let user = db.prepare(`
+      SELECT
+        id,
+        email,
+        name,
+        password_hash,
+        email_verified,
+        created_at
+      FROM users
+      WHERE email = ?
+      LIMIT 1
+    `).get(email);
+
+    /*
+     * Existing account:
+     * Google login ko existing email account
+     * ke saath connect kar do.
+     */
+    if (user) {
+      db.prepare(`
+        UPDATE users
+        SET
+          name = ?,
+          email_verified = 1
+        WHERE id = ?
+      `).run(
+        name,
+        user.id
+      );
+
+      user = db.prepare(`
+        SELECT
+          id,
+          email,
+          name,
+          email_verified,
+          created_at
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `).get(user.id);
+    }
+
+    /*
+     * New Google user:
+     * Password ki zarurat nahi hai.
+     */
+    else {
+      const result = db.prepare(`
+        INSERT INTO users (
+          email,
+          name,
+          password_hash,
+          email_verified
+        )
+        VALUES (?, ?, NULL, 1)
+      `).run(
+        email,
+        name
+      );
+
+      user = db.prepare(`
+        SELECT
+          id,
+          email,
+          name,
+          email_verified,
+          created_at
+        FROM users
+        WHERE id = ?
+        LIMIT 1
+      `).get(
+        result.lastInsertRowid
+      );
+    }
+
+    const token =
+      createAuthToken(user);
+
+    return res.json({
+      ok: true,
+      token,
+      user
+    });
+
+  } catch (error) {
+    console.error(
+      'GOOGLE LOGIN ERROR:',
+      error
+    );
+
+    return res.status(401).json({
+      error:
+        'Google login verify nahi hua.'
     });
   }
 });

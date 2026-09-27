@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Privacy from './Privacy';
 import Terms from './Terms';
 import Contact from './Contact';
@@ -16,13 +16,16 @@ import {
   authHeaders,
   getCurrentUser,
   getAuthToken,
-  login,
-  register,
+ login,
+loginWithGoogle,
+register,
   logout
 } from './auth';
 
 const API_BASE = import.meta.env.VITE_API_BASE || '/api';
 const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || '';
+const GOOGLE_CLIENT_ID =
+  import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 const tools = [
   {
@@ -154,12 +157,15 @@ function App() {
   const [selectedToolId, setSelectedToolId] = useState(() => {
   const params = new URLSearchParams(window.location.search);
   const tool = params.get('tool');
-
+  
   if (tool === 'image-resize') return 'image-resize';
   if (tool === 'signature-resize') return 'signature-resize';
 
   return 'photo-compressor';
 });
+
+  const googleButtonRef = useRef(null);
+
   const [adAvailable, setAdAvailable] = useState(
     hasRewardedAdConfig()
   );
@@ -194,9 +200,70 @@ function App() {
   const [authPassword, setAuthPassword] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
 
-  useEffect(() => {
-    let mounted = true;
+useEffect(() => {
+  if (!GOOGLE_CLIENT_ID) {
+    return;
+  }
 
+  const renderGoogleButton = () => {
+    if (!window.google?.accounts?.id || !googleButtonRef.current) {
+      return;
+    }
+
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleGoogleCredential,
+    });
+
+    googleButtonRef.current.innerHTML = '';
+
+    window.google.accounts.id.renderButton(
+      googleButtonRef.current,
+      {
+        theme: 'outline',
+        size: 'large',
+        text: 'continue_with',
+        shape: 'rectangular',
+        width: 360,
+      }
+    );
+  };
+
+  const loadGoogleScript = () => {
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+      return;
+    }
+
+    const existingScript = document.querySelector(
+      'script[src="https://accounts.google.com/gsi/client"]'
+    );
+
+    if (existingScript) {
+      existingScript.addEventListener('load', renderGoogleButton, {
+        once: true,
+      });
+      return;
+    }
+
+    const script = document.createElement('script');
+
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = renderGoogleButton;
+
+    document.head.appendChild(script);
+  };
+
+  const timer = window.setTimeout(loadGoogleScript, 0);
+
+  return () => {
+    window.clearTimeout(timer);
+  };
+}, [GOOGLE_CLIENT_ID, authMode]);
+useEffect(() => {
+  let mounted = true;
     async function loadUser() {
       try {
         if (!getAuthToken()) {
@@ -222,6 +289,32 @@ function App() {
     };
   }, []);
 
+  async function handleGoogleCredential(response) {
+  if (!response?.credential) {
+    setMessage('Google login credential nahi mila.');
+    return;
+  }
+
+  setBusy(true);
+  setMessage('');
+
+  try {
+    const data = await loginWithGoogle(
+      response.credential
+    );
+
+    setCurrentUser(data.user || null);
+    setMessage('Google login successful.');
+  } catch (err) {
+    setMessage(
+      err.response?.data?.error ||
+      err.message ||
+      'Google login failed.'
+    );
+  } finally {
+    setBusy(false);
+  }
+}
 
   async function handleAuthSubmit(e) {
     e.preventDefault();
@@ -715,6 +808,19 @@ function App() {
                   required
                 />
               </label>
+
+{GOOGLE_CLIENT_ID && (
+  <>
+    <div className="google-login-divider">
+      <span>OR</span>
+    </div>
+
+    <div
+      ref={googleButtonRef}
+      className="google-login-button"
+    />
+  </>
+)}
 
               <button
                 type="submit"
