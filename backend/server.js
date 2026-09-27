@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import crypto from 'crypto';
@@ -958,7 +958,7 @@ app.post('/api/verify-payment', requireAuth, (req, res) => {
               active
             )
             VALUES (
-              req.user.id,
+              ?,
               NULL,
               ?,
               ?,
@@ -967,11 +967,12 @@ app.post('/api/verify-payment', requireAuth, (req, res) => {
               1
             )
           `).run(
+            req.user.id,
             plan.plan_id,
             payment.id,
             startsAt.toISOString(),
             expiresAt.toISOString()
-          );
+);
         } else {
           db.prepare(`
             INSERT INTO user_access (
@@ -984,7 +985,7 @@ app.post('/api/verify-payment', requireAuth, (req, res) => {
               active
             )
             VALUES (
-              req.user.id,
+              ?,
               ?,
               ?,
               ?,
@@ -993,12 +994,13 @@ app.post('/api/verify-payment', requireAuth, (req, res) => {
               1
             )
           `).run(
+            req.user.id,
             payment.tool_id,
             plan.plan_id,
             payment.id,
             startsAt.toISOString(),
             expiresAt.toISOString()
-          );
+);
         }
       }
     });
@@ -1121,6 +1123,8 @@ app.listen(PORT, () => {
     `SMR Form Tools API running on port ${PORT}`
   );
 });
+
+
 
 
 

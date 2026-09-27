@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import Privacy from './Privacy';
 import Terms from './Terms';
 import Contact from './Contact';
@@ -7,6 +7,11 @@ import SignatureResize from './SignatureResize';
 import axios from 'axios';
 import AdSlot from './AdSlot';
 import { hasRewardedAdConfig } from './rewardedAds';
+import {
+  checkToolAccess as fetchToolAccess,
+  createToolOrder,
+  verifyToolPayment,
+} from './toolAccess';
 import {
   authHeaders,
   getCurrentUser,
@@ -146,6 +151,15 @@ function App() {
   const [message, setMessage] = useState('');
   const [unlocked, setUnlocked] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('day-pass');
+  const [selectedToolId, setSelectedToolId] = useState(() => {
+  const params = new URLSearchParams(window.location.search);
+  const tool = params.get('tool');
+
+  if (tool === 'image-resize') return 'image-resize';
+  if (tool === 'signature-resize') return 'signature-resize';
+
+  return 'photo-compressor';
+});
   const [adAvailable, setAdAvailable] = useState(
     hasRewardedAdConfig()
   );
@@ -153,6 +167,27 @@ function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const openPricing = params.get('pricing') === '1';
+
+    if (!openPricing) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      const pricingSection = document.getElementById('pricing');
+
+      if (pricingSection) {
+        pricingSection.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+    }, 100);
+
+    return () => window.clearTimeout(timer);
+  }, []);
   const [authMode, setAuthMode] = useState('login');
   const [authEmail, setAuthEmail] = useState('');
   const [authName, setAuthName] = useState('');
@@ -279,7 +314,7 @@ function App() {
     );
   }, [searchTerm]);
 
-  async function checkToolAccess() {
+  async function checkToolAccess(toolId = 'photo-compressor') {
     if (!getAuthToken()) {
       return {
         hasAccess: false,
@@ -287,32 +322,22 @@ function App() {
         planId: null,
         planName: null,
         expiresAt: null,
-        remainingMinutes: 0
+        remainingMinutes: 0,
       };
     }
 
     try {
-      const { data } = await axios.get(
-        `${API_BASE}/access/photo-compressor`,
-        {
-          headers: authHeaders()
-        }
-      );
-
+      const data = await fetchToolAccess(toolId);
       return data;
-    } catch (err) {
-      console.error(
-        'ACCESS CHECK FAILED:',
-        err
-      );
-
+    } catch (error) {
+      console.error('TOOL ACCESS CHECK ERROR:', error);
       return {
         hasAccess: false,
         accessType: null,
         planId: null,
         planName: null,
         expiresAt: null,
-        remainingMinutes: 0
+        remainingMinutes: 0,
       };
     }
   }
@@ -366,7 +391,7 @@ function App() {
     }
   }
 
-  async function payToUnlock(planId = 'day-pass') {
+  async function payToUnlock(planId = 'day-pass', toolId = selectedToolId) {
     setMessage('Payment checkout open kar rahe hain...');
 
     try {
@@ -385,16 +410,10 @@ function App() {
 
       await loadRazorpay();
 
-      const { data: order } = await axios.post(
-        `${API_BASE}/create-order`,
-        {
-          toolId: 'photo-compressor',
-          planId,
-          purpose: 'plan_purchase',
-        },
-        {
-          headers: authHeaders(),
-        }
+      const order = await createToolOrder(
+        toolId,
+        planId,
+        'plan_purchase'
       );
 
       const options = {
@@ -408,20 +427,23 @@ function App() {
 
         handler: async (response) => {
           try {
-            const { data: verified } =
-              await axios.post(
-                `${API_BASE}/verify-payment`,
-                response,
-                {
-                  headers: authHeaders(),
-                }
-              );
+            const verified =
+              await verifyToolPayment(response);
 
             if (verified.ok) {
               setUnlocked(true);
               setMessage(
                 'Payment verified. Download unlocked.'
               );
+
+              const pricingMode =
+                new URLSearchParams(window.location.search).get('pricing') === '1';
+
+              if (pricingMode && window.history.length > 1) {
+                window.setTimeout(() => {
+                  window.history.back();
+                }, 300);
+              }
             } else {
               setMessage(
                 'Payment verify nahi hua.'
@@ -528,14 +550,27 @@ function App() {
   if (window.location.pathname === '/contact') {
     return <Contact />;
   }
+  const currentPath = window.location.pathname;
+  const currentParams = new URLSearchParams(window.location.search);
+  const currentTool = currentParams.get('tool');
+  const openPricing = currentParams.get('pricing') === '1';
 
-  if (window.location.pathname === '/resize') {
+  if (
+    !openPricing &&
+    (
+      currentPath === '/resize' ||
+      currentTool === 'image-resize'
+    )
+  ) {
     return <ImageResize />;
   }
 
   if (
-    window.location.pathname ===
-    '/signature-resize'
+    !openPricing &&
+    (
+      currentPath === '/signature-resize' ||
+      currentTool === 'signature-resize'
+    )
   ) {
     return <SignatureResize />;
   }
@@ -565,7 +600,7 @@ function App() {
           {!authLoading && currentUser ? (
             <>
               <span className="user-badge">
-                ?? {currentUser.name || currentUser.email}
+                {currentUser.name || currentUser.email}
               </span>
 
               <button
@@ -745,8 +780,8 @@ function App() {
             </h1>
 
             <p className="lead">
-              Upload → automatic
-              resize/compress → download.
+              Upload &rarr; automatic
+              resize/compress &rarr; download.
               Payment ke bina bhi option
               rahega: supported rewarded ad
               complete karke unlock.
@@ -797,7 +832,7 @@ function App() {
                 </div>
 
                 <div className="drop-sub">
-                  JPG / PNG • browser mein
+                  JPG / PNG &bull; browser mein
                   process hoga
                 </div>
               </label>
@@ -807,7 +842,7 @@ function App() {
                 disabled={busy}
               >
                 {busy
-                  ? 'Processing…'
+                  ? 'Processing&hellip;'
                   : `Make ${targetLabel}`}
               </button>
             </form>
@@ -815,7 +850,7 @@ function App() {
             {result && (
               <div className="unlock-box">
                 <div className="ready">
-                  <span>✓</span> {message}
+                  <span>&#10003;</span> {message}
                 </div>
 
                 {!unlocked && (
@@ -832,7 +867,7 @@ function App() {
                           watchAdToUnlock
                         }
                       >
-                        ?? Watch Ad & Get Free
+                        Watch Ad & Get Free
                         Download
                       </button>
 
@@ -914,7 +949,7 @@ function App() {
                       className="tool-link"
                       href={tool.href}
                     >
-                      Open Tool →
+                      Open Tool &rarr;
                     </a>
                   ) : (
                     <span className="tool-coming-soon">
@@ -1177,15 +1212,15 @@ function App() {
       </main>
 
       <footer>
-        © 2026 SMR Form Tools •{' '}
+        &#169; 2026 SMR Form Tools &bull;{' '}
         <a href="/privacy">
           Privacy
         </a>{' '}
-        •{' '}
+        &bull;{' '}
         <a href="/terms">
           Terms
         </a>{' '}
-        •{' '}
+        &bull;{' '}
         <a href="/contact">
           Contact
         </a>
@@ -1195,6 +1230,16 @@ function App() {
 }
 
 export default App;
+
+
+
+
+
+
+
+
+
+
 
 
 

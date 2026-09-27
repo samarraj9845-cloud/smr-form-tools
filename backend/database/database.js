@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+﻿import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -10,6 +10,7 @@ const dbPath = path.join(__dirname, 'smr-form-tools.db');
 const db = new Database(dbPath);
 
 db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS admins (
@@ -75,8 +76,90 @@ db.exec(`
     value TEXT,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS pricing_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan_id TEXT UNIQUE,
+    name TEXT,
+    description TEXT,
+    price_paise INTEGER,
+    duration_hours INTEGER,
+    scope TEXT DEFAULT 'tool',
+    active INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS user_access (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    tool_id TEXT,
+    plan_id TEXT NOT NULL,
+    payment_id INTEGER,
+    starts_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at TEXT NOT NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (payment_id) REFERENCES payments(id)
+  );
 `);
 
+/*
+ * Safe schema migration helper.
+ * Existing databases are preserved.
+ */
+function ensureColumn(tableName, columnName, definition) {
+  const columns = db
+    .prepare(`PRAGMA table_info(${tableName})`)
+    .all();
+
+  const exists = columns.some(
+    (column) => column.name === columnName
+  );
+
+  if (!exists) {
+    db.exec(
+      `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`
+    );
+
+    console.log(
+      `Database migration: added ${tableName}.${columnName}`
+    );
+  }
+}
+
+/*
+ * Existing local databases created before
+ * authentication/payment plans need these columns.
+ */
+ensureColumn(
+  'users',
+  'password_hash',
+  'TEXT'
+);
+
+ensureColumn(
+  'users',
+  'email_verified',
+  'INTEGER NOT NULL DEFAULT 0'
+);
+
+ensureColumn(
+  'payments',
+  'plan_id',
+  'TEXT'
+);
+
+ensureColumn(
+  'payments',
+  'user_id',
+  'INTEGER'
+);
+
+/*
+ * Default tools.
+ */
 const defaultTools = [
   {
     tool_id: 'photo-compressor',
@@ -142,5 +225,104 @@ const insertManyTools = db.transaction((items) => {
 });
 
 insertManyTools(defaultTools);
+
+/*
+ * Default pricing plans.
+ *
+ * INSERT OR IGNORE prevents duplicate plans.
+ */
+const defaultPlans = [
+  {
+    plan_id: 'day-pass',
+    name: '1-Day Pass',
+    description: 'One tool ke liye 24-hour access.',
+    price_paise: 200,
+    duration_hours: 24,
+    scope: 'tool',
+  },
+  {
+    plan_id: 'weekly-pass',
+    name: '7-Day Pass',
+    description: 'One tool ke liye 7-day access.',
+    price_paise: 900,
+    duration_hours: 168,
+    scope: 'tool',
+  },
+  {
+    plan_id: 'monthly-tool',
+    name: '30-Day Tool Pass',
+    description: 'One tool ke liye 30-day access.',
+    price_paise: 2900,
+    duration_hours: 720,
+    scope: 'tool',
+  },
+  {
+    plan_id: 'all-tools-5h',
+    name: '5-Hour All Tools Pass',
+    description: 'Sabhi available tools ke liye 5-hour unlimited access.',
+    price_paise: 500,
+    duration_hours: 5,
+    scope: 'all_tools',
+  },
+  {
+    plan_id: 'all-tools-monthly',
+    name: 'All Tools Pass',
+    description: 'Sabhi available tools ke liye 30-day access.',
+    price_paise: 4900,
+    duration_hours: 720,
+    scope: 'all_tools',
+  },
+];
+
+const insertPlan = db.prepare(`
+  INSERT OR IGNORE INTO pricing_plans (
+    plan_id,
+    name,
+    description,
+    price_paise,
+    duration_hours,
+    scope,
+    active
+  )
+  VALUES (
+    @plan_id,
+    @name,
+    @description,
+    @price_paise,
+    @duration_hours,
+    @scope,
+    1
+  )
+`);
+
+const insertManyPlans = db.transaction((items) => {
+  for (const item of items) {
+    insertPlan.run(item);
+  }
+});
+
+insertManyPlans(defaultPlans);
+
+/*
+ * Helpful indexes.
+ */
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_payments_user_id
+  ON payments(user_id);
+
+  CREATE INDEX IF NOT EXISTS idx_payments_plan_id
+  ON payments(plan_id);
+
+  CREATE INDEX IF NOT EXISTS idx_user_access_user_id
+  ON user_access(user_id);
+
+  CREATE INDEX IF NOT EXISTS idx_user_access_expires_at
+  ON user_access(expires_at);
+
+  CREATE INDEX IF NOT EXISTS idx_downloads_user_id
+  ON downloads(user_id);
+`);
+
+console.log('Database initialization/migration complete.');
 
 export default db;

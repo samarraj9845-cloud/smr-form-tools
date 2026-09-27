@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
+import { checkToolAccess } from './toolAccess';
 
 export default function SignatureResize() {
   const [file, setFile] = useState(null);
@@ -7,9 +8,67 @@ export default function SignatureResize() {
   const [outputUrl, setOutputUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [unlocked, setUnlocked] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadAccess() {
+      try {
+        const access = await checkToolAccess('signature-resize');
+
+        if (mounted) {
+          setUnlocked(Boolean(access.hasAccess));
+        }
+      } catch (error) {
+        console.error('SIGNATURE RESIZE ACCESS ERROR:', error);
+
+        if (mounted) {
+          setUnlocked(false);
+        }
+      } finally {
+        if (mounted) {
+          setAccessLoading(false);
+        }
+      }
+    }
+
+    loadAccess();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (outputUrl) {
+        URL.revokeObjectURL(outputUrl);
+      }
+    };
+  }, [outputUrl]);
+
+  function watchAdToUnlock() {
+    setMessage('Rewarded ad start ho raha hai...');
+
+    if (typeof window.smrShowRewardedAd === 'function') {
+      window.smrShowRewardedAd(() => {
+        setUnlocked(true);
+        setMessage('Ad complete. Download unlocked.');
+      });
+      return;
+    }
+
+    setMessage('Rewarded Ad abhi configured nahi hai.');
+  }
 
   function handleFileChange(e) {
     const selected = e.target.files?.[0] || null;
+
+    if (outputUrl) {
+      URL.revokeObjectURL(outputUrl);
+    }
 
     setFile(selected);
     setOutputUrl('');
@@ -30,8 +89,7 @@ export default function SignatureResize() {
     }
 
     setBusy(true);
-    setOutputUrl('');
-    setMessage('Signature resize ho rahi hai...');
+    setMessage('Signature resize ho raha hai...');
 
     try {
       const bitmap = await createImageBitmap(file);
@@ -46,6 +104,7 @@ export default function SignatureResize() {
         throw new Error('Browser canvas support nahi karta.');
       }
 
+      // White background for form-friendly signature output.
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -67,9 +126,14 @@ export default function SignatureResize() {
 
       const url = URL.createObjectURL(blob);
 
+      if (outputUrl) {
+        URL.revokeObjectURL(outputUrl);
+      }
+
       setOutputUrl(url);
+
       setMessage(
-        `Ready: ${width} × ${height}px • ${(blob.size / 1024).toFixed(1)} KB`
+        `Ready: ${width} x ${height}px | ${(blob.size / 1024).toFixed(1)} KB`
       );
     } catch (error) {
       setMessage(error.message || 'Signature resize failed.');
@@ -90,15 +154,14 @@ export default function SignatureResize() {
       }}
     >
       <a
-        href="/"
+        href="/?tool=signature-resize&pricing=1"
         style={{
           display: 'inline-block',
           marginBottom: '24px',
           color: '#2563eb',
           textDecoration: 'none',
         }}
-      >
-        ← Back to SMR Form Tools
+      >        ← Back to Photo Compressor
       </a>
 
       <h1>Signature Resize Tool</h1>
@@ -111,7 +174,7 @@ export default function SignatureResize() {
       <form onSubmit={resizeSignature}>
         <div style={{ marginBottom: '16px' }}>
           <label>
-            <strong>Signature select karo</strong>
+            <strong>Signature image select karo</strong>
             <br />
             <input
               type="file"
@@ -181,22 +244,75 @@ export default function SignatureResize() {
 
       {outputUrl && (
         <div style={{ marginTop: '24px' }}>
-          <a
-            href={outputUrl}
-            download="smr-form-tools-signature.jpg"
-            style={{
-              display: 'inline-block',
-              padding: '12px 20px',
-              background: '#2563eb',
-              color: '#ffffff',
-              textDecoration: 'none',
-              borderRadius: '8px',
-            }}
-          >
-            Download Resized Signature
-          </a>
+          {accessLoading ? (
+            <p>Access check ho raha hai...</p>
+          ) : unlocked ? (
+            <a
+              href={outputUrl}
+              download="smr-form-tools-signature.jpg"
+              style={{
+                display: 'inline-block',
+                padding: '12px 20px',
+                background: '#2563eb',
+                color: '#ffffff',
+                textDecoration: 'none',
+                borderRadius: '8px',
+              }}
+            >
+              Download Resized Signature
+            </a>
+          ) : (
+            <div>
+              <p>
+                Download unlock karne ke liye ek option choose karo:
+              </p>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginTop: '12px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={watchAdToUnlock}
+                  style={{
+                    padding: '12px 20px',
+                    background: '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Watch Ad & Get Free Download
+                </button>
+
+                <a
+                  href="/?tool=signature-resize&pricing=1"
+                  style={{
+                    display: 'inline-block',
+                    padding: '12px 20px',
+                    background: '#2563eb',
+                    color: '#ffffff',
+                    textDecoration: 'none',
+                    borderRadius: '8px',
+                  }}
+                >
+                  Unlock & Pay
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </main>
   );
 }
+
+
+
+
+

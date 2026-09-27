@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
+import { checkToolAccess } from './toolAccess';
 
 export default function ImageResize() {
   const [file, setFile] = useState(null);
@@ -7,6 +8,52 @@ export default function ImageResize() {
   const [outputUrl, setOutputUrl] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [unlocked, setUnlocked] = useState(false);
+  const [accessLoading, setAccessLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadAccess() {
+      try {
+        const access = await checkToolAccess('image-resize');
+
+        if (mounted) {
+          setUnlocked(Boolean(access.hasAccess));
+        }
+      } catch (error) {
+        console.error('IMAGE RESIZE ACCESS ERROR:', error);
+
+        if (mounted) {
+          setUnlocked(false);
+        }
+      } finally {
+        if (mounted) {
+          setAccessLoading(false);
+        }
+      }
+    }
+
+    loadAccess();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  function watchAdToUnlock() {
+    setMessage('Rewarded ad start ho raha hai...');
+
+    if (typeof window.smrShowRewardedAd === 'function') {
+      window.smrShowRewardedAd(() => {
+        setUnlocked(true);
+        setMessage('Ad complete. Download unlocked.');
+      });
+      return;
+    }
+
+    setMessage('Rewarded Ad abhi configured nahi hai.');
+  }
 
   function handleFileChange(e) {
     const selected = e.target.files?.[0];
@@ -68,8 +115,12 @@ export default function ImageResize() {
       const url = URL.createObjectURL(blob);
 
       setOutputUrl(url);
+
+      const access = await checkToolAccess('image-resize');
+      setUnlocked(Boolean(access.hasAccess));
+
       setMessage(
-        `Ready: ${width} × ${height}px • ${(blob.size / 1024).toFixed(1)} KB`
+        `Ready: ${width} x ${height}px | ${(blob.size / 1024).toFixed(1)} KB`
       );
     } catch (error) {
       setMessage(error.message || 'Image resize failed.');
@@ -90,7 +141,7 @@ export default function ImageResize() {
       }}
     >
       <a
-        href="/"
+        href="/?tool=image-resize&pricing=1"
         style={{
           display: 'inline-block',
           marginBottom: '24px',
@@ -98,7 +149,7 @@ export default function ImageResize() {
           textDecoration: 'none',
         }}
       >
-        ← Back to SMR Form Tools
+        ← Back to Photo Compressor
       </a>
 
       <h1>Image Resize Tool</h1>
@@ -181,22 +232,76 @@ export default function ImageResize() {
 
       {outputUrl && (
         <div style={{ marginTop: '24px' }}>
-          <a
-            href={outputUrl}
-            download="smr-form-tools-resized.jpg"
-            style={{
-              display: 'inline-block',
-              padding: '12px 20px',
-              background: '#2563eb',
-              color: '#ffffff',
-              textDecoration: 'none',
-              borderRadius: '8px',
-            }}
-          >
-            Download Resized JPG
-          </a>
+          {accessLoading ? (
+            <p>Access check ho raha hai...</p>
+          ) : unlocked ? (
+            <a
+              href={outputUrl}
+              download="smr-form-tools-resized.jpg"
+              style={{
+                display: 'inline-block',
+                padding: '12px 20px',
+                background: '#2563eb',
+                color: '#ffffff',
+                textDecoration: 'none',
+                borderRadius: '8px',
+              }}
+            >
+              Download Resized JPG
+            </a>
+          ) : (
+            <div>
+              <p>
+                Download unlock karne ke liye ek option choose karo:
+              </p>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginTop: '12px',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={watchAdToUnlock}
+                  style={{
+                    padding: '12px 20px',
+                    background: '#16a34a',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Watch Ad & Get Free Download
+                </button>
+
+                <a
+                  href="/?tool=image-resize&pricing=1"
+                  style={{
+                    display: 'inline-block',
+                    padding: '12px 20px',
+                    background: '#2563eb',
+                    color: '#ffffff',
+                    textDecoration: 'none',
+                    borderRadius: '8px',
+                  }}
+                >
+                  Unlock & Pay
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </main>
   );
 }
+
+
+
+
+
+
