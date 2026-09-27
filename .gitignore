@@ -1,0 +1,16 @@
+node_modules/
+.env
+*.env
+*.log
+.DS_Store
+dist/
+
+# Local database
+backend/database/*.db
+backend/database/*.db-shm
+backend/database/*.db-wal
+
+# Backups
+*.backup
+*.bak
+frontend/src/App.jsx.malformed-backup
