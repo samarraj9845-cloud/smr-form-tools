@@ -1,4 +1,5 @@
 ﻿import Database from 'better-sqlite3';
+import bcrypt from 'bcryptjs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -322,6 +323,65 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_downloads_user_id
   ON downloads(user_id);
 `);
+
+/*
+ * Production admin bootstrap.
+ *
+ * Admin credentials are supplied through environment variables.
+ * Password is never stored in source code or logged.
+ */
+const ADMIN_USERNAME = String(
+  process.env.ADMIN_USERNAME || ''
+).trim();
+
+const ADMIN_PASSWORD = String(
+  process.env.ADMIN_PASSWORD || ''
+);
+
+if (ADMIN_USERNAME && ADMIN_PASSWORD) {
+  const existingAdmin = db.prepare(`
+    SELECT id
+    FROM admins
+    WHERE username = ?
+    LIMIT 1
+  `).get(ADMIN_USERNAME);
+
+  const passwordHash = bcrypt.hashSync(
+    ADMIN_PASSWORD,
+    12
+  );
+
+  if (existingAdmin) {
+    db.prepare(`
+      UPDATE admins
+      SET
+        password_hash = ?
+      WHERE id = ?
+    `).run(
+      passwordHash,
+      existingAdmin.id
+    );
+
+    console.log(
+      `Admin credentials synchronized for username: ${ADMIN_USERNAME}`
+    );
+  } else {
+    db.prepare(`
+      INSERT INTO admins (
+        username,
+        password_hash
+      )
+      VALUES (?, ?)
+    `).run(
+      ADMIN_USERNAME,
+      passwordHash
+    );
+
+    console.log(
+      `Admin account created for username: ${ADMIN_USERNAME}`
+    );
+  }
+}
 
 console.log('Database initialization/migration complete.');
 
