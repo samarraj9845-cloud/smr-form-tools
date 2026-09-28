@@ -1228,6 +1228,136 @@ app.get('/api/admin/payments', requireAdmin, (_req, res) => {
 });
 
 /*
+ * Admin dashboard overview API.
+ * Protected by admin authentication.
+ */
+app.get('/api/admin/overview', requireAdmin, (_req, res) => {
+  try {
+    const totalUsers = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM users
+    `).get().count;
+
+    const totalPayments = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM payments
+    `).get().count;
+
+    const verifiedPayments = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM payments
+      WHERE LOWER(status) IN ('verified', 'paid')
+    `).get().count;
+
+    const pendingPayments = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM payments
+      WHERE LOWER(status) IN ('pending', 'created')
+    `).get().count;
+
+    const failedPayments = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM payments
+      WHERE LOWER(status) = 'failed'
+    `).get().count;
+
+    const activeAccess = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM user_access
+      WHERE active = 1
+        AND datetime(expires_at) > datetime('now')
+    `).get().count;
+
+    const revenue = db.prepare(`
+      SELECT COALESCE(SUM(amount_paise), 0) AS amount_paise
+      FROM payments
+      WHERE LOWER(status) IN ('verified', 'paid')
+    `).get().amount_paise;
+
+    const recentUsers = db.prepare(`
+      SELECT
+        id,
+        email,
+        name,
+        email_verified,
+        created_at
+      FROM users
+      ORDER BY id DESC
+      LIMIT 10
+    `).all();
+
+    const recentPayments = db.prepare(`
+      SELECT
+        p.id,
+        p.razorpay_order_id,
+        p.razorpay_payment_id,
+        p.amount_paise,
+        p.currency,
+        p.tool_id,
+        p.plan_id,
+        p.purpose,
+        p.status,
+        p.user_id,
+        u.email AS user_email,
+        u.name AS user_name,
+        p.created_at
+      FROM payments p
+      LEFT JOIN users u
+        ON u.id = p.user_id
+      ORDER BY p.id DESC
+      LIMIT 20
+    `).all();
+
+    const access = db.prepare(`
+      SELECT
+        ua.id,
+        ua.user_id,
+        ua.tool_id,
+        ua.plan_id,
+        ua.payment_id,
+        ua.starts_at,
+        ua.expires_at,
+        ua.active,
+        u.email AS user_email,
+        u.name AS user_name,
+        pp.name AS plan_name
+      FROM user_access ua
+      LEFT JOIN users u
+        ON u.id = ua.user_id
+      LEFT JOIN pricing_plans pp
+        ON pp.plan_id = ua.plan_id
+      ORDER BY ua.id DESC
+      LIMIT 50
+    `).all();
+
+    res.json({
+      ok: true,
+      stats: {
+        totalUsers: Number(totalUsers || 0),
+        totalPayments: Number(totalPayments || 0),
+        verifiedPayments: Number(verifiedPayments || 0),
+        pendingPayments: Number(pendingPayments || 0),
+        failedPayments: Number(failedPayments || 0),
+        activeAccess: Number(activeAccess || 0),
+        revenuePaise: Number(revenue || 0)
+      },
+      recentUsers,
+      recentPayments,
+      access
+    });
+  } catch (error) {
+    console.error(
+      'ADMIN OVERVIEW ERROR:',
+      error
+    );
+
+    res.status(500).json({
+      error:
+        'Admin dashboard data load nahi ho paya.'
+    });
+  }
+});
+/*
  * Serve built React frontend
  */
 const frontendDist = path.join(
@@ -1281,6 +1411,7 @@ app.listen(PORT, () => {
     `SMR Form Tools API running on port ${PORT}`
   );
 });
+
 
 
 

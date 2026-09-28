@@ -4,6 +4,7 @@ import Terms from './Terms';
 import Contact from './Contact';
 import ImageResize from './ImageResize';
 import SignatureResize from './SignatureResize';
+import Admin from './Admin';
 import axios from 'axios';
 import AdSlot from './AdSlot';
 import { hasRewardedAdConfig } from './rewardedAds';
@@ -630,6 +631,10 @@ useEffect(() => {
     document.body.appendChild(a);
     a.click();
     a.remove();
+  }
+
+  if (window.location.pathname === '/admin') {
+    return <Admin />;
   }
 
   if (window.location.pathname === '/privacy') {
@@ -1336,6 +1341,8 @@ useEffect(() => {
 }
 
 export default App;
+
+
 
 
 
